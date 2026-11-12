@@ -424,5 +424,11 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
+# Python project
+.env
+.venv/
+venv/
+.streamlit/secrets.toml
+
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
