@@ -1,55 +1,52 @@
 # ---------------------------------------------------------------
 # app.py: the Streamlit interface
-# The student uploads their lecture slides and their cheatsheet.
-# Later (Step 3.3) the app will check which slides the cheatsheet covers.
+# The student uploads lecture slides and their cheatsheet.
+# The app shows which slide sections (and which points on each slide)
+# the cheatsheet covered, skipped, or couldn't be checked.
 # ---------------------------------------------------------------
 
-import streamlit as st              # Streamlit builds the web page from Python
-from pypdf import PdfReader    
-from covered import check_coverage     # used to read text out of a PDF cheatsheet
+import streamlit as st
+from pypdf import PdfReader
 
-# Our own functions from IntelligentInteractiveSystems.py:
-#   extract_slides -> reads each slide's number, title and text from the PDF
-#   group_slides   -> merges repeated animation slides into one section
-from IntelligentInteractiveSystems import extract_slides, group_slides
+# Our own files:
+#   IntelligentInteractiveSystems.py -> reading, grouping and rendering slides
+#   covered.py                       -> the coverage checker (embeddings)
+from IntelligentInteractiveSystems import extract_slides, group_slides, render_pages
+from covered import check_coverage
 
-# Page heading
 st.title("Slide Coverage Cheatsheet")
 
 # ---------------- 1. Slides input ----------------
-# A file upload box that only accepts PDFs.
-# 'uploaded' is None until the student picks a file.
 st.subheader("Your lecture slides")
 uploaded = st.file_uploader("Upload lecture slides (PDF)", type="pdf")
 
 # ---------------- 2. Cheatsheet input ----------------
-# The student can either upload a file OR paste text.
+# The student can upload a file OR paste text
 st.subheader("Your cheatsheet")
 cheat_file = st.file_uploader("Upload cheatsheet (PDF, TXT or MD)",
                               type=["pdf", "txt", "md"])
 cheat_text = st.text_area("…or paste it here", height=200)
 
-# Turn whichever input they used into one plain string: 'cheatsheet'
+# Turn whichever input they used into one plain string
 cheatsheet = ""
-if cheat_file:                                   # a file was uploaded
+if cheat_file:
     if cheat_file.name.endswith(".pdf"):
-        # PDF: read every page's text and join them with new lines
         pages = PdfReader(cheat_file).pages
         cheatsheet = "\n".join((p.extract_text() or "") for p in pages)
     else:
-        # TXT or MD: the file is already text, so decode the bytes
         cheatsheet = cheat_file.read().decode("utf-8", errors="ignore")
-elif cheat_text.strip():                         # nothing uploaded, but text was pasted
+elif cheat_text.strip():
     cheatsheet = cheat_text
 
-# Confirm the cheatsheet loaded and show its length
 if cheatsheet:
     st.success(f"Cheatsheet loaded ({len(cheatsheet.split())} words)")
 
 # ---------------- 3. Slides and coverage ----------------
 if uploaded:
-    slides = extract_slides(uploaded)
-    groups = group_slides(slides)
+    slides = extract_slides(uploaded)               # individual slides
+    groups = group_slides(slides)                   # animation builds merged
+    images = render_pages(uploaded.getvalue())      # one PNG per slide (index 0 = slide 1)
+
     st.subheader("Slide coverage")
     st.write(f"Found {len(slides)} slides → {len(groups)} sections")
 
@@ -62,19 +59,22 @@ if uploaded:
         with st.spinner("Checking coverage…"):
             groups = check_coverage(groups, cheatsheet, threshold)
 
-        summary = st.empty()            # counts get filled in after the list
+        summary = st.empty()        # placeholder: counts are filled in after the list
         covered = skipped = cant = 0
 
         for g in groups:
             nums = g["numbers"]
             label = f"Slide {nums[0]}" if len(nums) == 1 else f"Slides {nums[0]}–{nums[-1]}"
+            slide_img = images[nums[-1] - 1]   # last slide of a group = fully built animation
 
+            # --- Image-only sections: can't check, but still show the slide ---
             if g["status"] == "cant_check":
                 cant += 1
-                st.caption(f"⚠ {label}: {g['title']} (image only, can't check)")
+                with st.expander(f"⚠ {label}: {g['title']} (image only, can't check)"):
+                    st.image(slide_img, caption=f"Slide {nums[-1]}")
                 continue
 
-            # Ticked = covered. The student can override by ticking or unticking.
+            # --- Tick = covered. The student can tick or untick to override the AI. ---
             tag = "" if g["status"] == "covered" else "  :red[skipped]"
             ticked = st.checkbox(f"{label}: {g['title']}{tag}",
                                  value=(g["status"] == "covered"),
@@ -82,11 +82,32 @@ if uploaded:
             covered += ticked
             skipped += not ticked
 
-            # Show why: the slide text and its closest cheatsheet line
-            with st.expander(f"Why? (similarity {g['score']:.2f})"):
-                st.markdown(f"**Closest cheatsheet line:** {g['match']}")
-                st.text(g["text"])
+            # --- Compare panel: slide vs cheatsheet, point by point ---
+            with st.expander(f"Compare (similarity {g['score']:.2f})"):
+                left, right = st.columns([3, 2])
 
+                with left:                                   # the real slide
+                    st.image(slide_img, caption=f"Slide {nums[-1]}")
+
+                with right:                                  # closest cheatsheet lines
+                    st.markdown("**Closest cheatsheet lines**")
+                    for line, s in g["top_matches"]:
+                        st.markdown(f"- {line}  \n  <small>similarity {s:.2f}</small>",
+                                    unsafe_allow_html=True)
+
+                # Each point on the slide: covered or missed
+                if g["points"]:
+                    n_cov = sum(p["covered"] for p in g["points"])
+                    st.markdown(f"**Points on this slide: {n_cov}/{len(g['points'])} covered**")
+                    for p in g["points"]:
+                        icon = "✅" if p["covered"] else "❌"
+                        st.markdown(f"{icon} {p['text']}")
+                        if p["covered"]:
+                            st.caption(f"↳ matched: {p['match']} ({p['score']:.2f})")
+                else:
+                    st.caption("This slide is mostly a diagram, so there are no text points to compare.")
+
+        # Summary counts at the top (they include the student's overrides)
         with summary.container():
             c1, c2, c3 = st.columns(3)
             c1.metric("Covered", covered)
