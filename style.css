@@ -1,0 +1,59 @@
+/* Fonts: Inter for text, JetBrains Mono for the developer-style accents */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+body, .stApp { font-family: 'Inter', sans-serif; }
+
+/* Soft blue-to-white page background */
+.stApp { background: linear-gradient(180deg, #F3F8FF 0%, #FFFFFF 35%); }
+.block-container { max-width: 1200px; padding-top: 2rem; }
+
+/* Header banner */
+.hero {
+  background: linear-gradient(135deg, #1E40AF, #3B82F6);
+  padding: 28px 32px; border-radius: 20px; margin-bottom: 28px;
+  box-shadow: 0 20px 40px -12px rgba(37, 99, 235, .35);
+}
+.hero h1 { color: #fff; margin: 0; font-weight: 600; font-size: 2rem; }
+.hero p  { color: #DBEAFE; margin: 6px 0 12px; }
+.hero code {
+  font-family: 'JetBrains Mono', monospace; font-size: .75rem;
+  background: rgba(255,255,255,.15); color: #fff;
+  padding: 3px 9px; border-radius: 6px; margin-right: 6px;
+}
+
+/* Small uppercase section labels */
+.label {
+  font-family: 'JetBrains Mono', monospace; font-size: .72rem;
+  letter-spacing: .1em; text-transform: uppercase; color: #2563EB;
+  margin: 8px 0 6px;
+}
+
+/* Upload boxes */
+[data-testid="stFileUploader"] section {
+  border-radius: 14px; border: 1.5px dashed #93C5FD; background: #F8FBFF;
+}
+[data-testid="stTextArea"] textarea {
+  border-radius: 12px; font-family: 'JetBrains Mono', monospace; font-size: .85rem;
+}
+
+/* Floating cards: the Compare panels lift slightly on hover */
+[data-testid="stExpander"] {
+  border: 1px solid #E0ECFF; border-radius: 14px; background: #fff;
+  box-shadow: 0 6px 18px -8px rgba(30, 64, 175, .15);
+  transition: transform .15s ease, box-shadow .15s ease;
+  margin-bottom: 14px;
+}
+[data-testid="stExpander"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -12px rgba(30, 64, 175, .28);
+}
+
+/* Summary number cards */
+[data-testid="stMetric"] {
+  background: #fff; border: 1px solid #E0ECFF; border-radius: 16px;
+  padding: 16px 20px; box-shadow: 0 8px 24px -12px rgba(30, 64, 175, .25);
+}
+[data-testid="stMetricValue"] { font-family: 'JetBrains Mono', monospace; color: #1E3A8A; }
+
+/* Sidebar */
+[data-testid="stSidebar"] { background: #F0F6FF; border-right: 1px solid #E0ECFF; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: .78rem; color: #475569; }
