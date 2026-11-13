@@ -5,7 +5,8 @@
 # ---------------------------------------------------------------
 
 import streamlit as st              # Streamlit builds the web page from Python
-from pypdf import PdfReader         # used to read text out of a PDF cheatsheet
+from pypdf import PdfReader    
+from covered import check_coverage     # used to read text out of a PDF cheatsheet
 
 # Our own functions from IntelligentInteractiveSystems.py:
 #   extract_slides -> reads each slide's number, title and text from the PDF
@@ -45,36 +46,49 @@ elif cheat_text.strip():                         # nothing uploaded, but text wa
 if cheatsheet:
     st.success(f"Cheatsheet loaded ({len(cheatsheet.split())} words)")
 
-# ---------------- 3. Show the slides ----------------
-# Everything below only runs once a slides PDF has been uploaded.
+# ---------------- 3. Slides and coverage ----------------
 if uploaded:
-    slides = extract_slides(uploaded)    # list of individual slides
-    groups = group_slides(slides)        # list of merged sections
+    slides = extract_slides(uploaded)
+    groups = group_slides(slides)
+    st.subheader("Slide coverage")
+    st.write(f"Found {len(slides)} slides → {len(groups)} sections")
 
-    # Count sections with too little text for the checker to judge
-    no_text = sum(1 for g in groups if not g["has_text"])
+    if not cheatsheet:
+        st.info("Add your cheatsheet above to check coverage.")
+    else:
+        # Developer setting: how similar counts as 'covered'
+        threshold = st.sidebar.slider("Match threshold", 0.2, 0.8, 0.45, 0.05)
 
-    st.subheader("Slides")
-    st.write(f"Found {len(slides)} slides → {len(groups)} sections "
-             f"({no_text} with too little text to check)")
+        with st.spinner("Checking coverage…"):
+            groups = check_coverage(groups, cheatsheet, threshold)
 
-    # One expandable row per section
-    for g in groups:
-        nums = g["numbers"]              # slide numbers in this section, e.g. [64, 65, …, 71]
+        summary = st.empty()            # counts get filled in after the list
+        covered = skipped = cant = 0
 
-        # Label it "Slide 5" for one slide or "Slides 64–71" for a group
-        if len(nums) == 1:
-            label = f"Slide {nums[0]}"
-        else:
-            label = f"Slides {nums[0]}–{nums[-1]}"
+        for g in groups:
+            nums = g["numbers"]
+            label = f"Slide {nums[0]}" if len(nums) == 1 else f"Slides {nums[0]}–{nums[-1]}"
 
-        # Add a warning for image-only sections
-        flag = "" if g["has_text"] else "  ⚠ image only"
+            if g["status"] == "cant_check":
+                cant += 1
+                st.caption(f"⚠ {label}: {g['title']} (image only, can't check)")
+                continue
 
-        # st.expander makes a row that opens when clicked
-        with st.expander(f"{label}: {g['title']}{flag}"):
-            st.text(g["text"] or "(no text found)")
+            # Ticked = covered. The student can override by ticking or unticking.
+            tag = "" if g["status"] == "covered" else "  :red[skipped]"
+            ticked = st.checkbox(f"{label}: {g['title']}{tag}",
+                                 value=(g["status"] == "covered"),
+                                 key=f"cov_{nums[0]}_{g['status']}")
+            covered += ticked
+            skipped += not ticked
 
-    # Placeholder for Step 3.3: this is where coverage checking will go
-    if cheatsheet:
-        st.info("Both inputs loaded. Coverage checking comes in the next step.")
+            # Show why: the slide text and its closest cheatsheet line
+            with st.expander(f"Why? (similarity {g['score']:.2f})"):
+                st.markdown(f"**Closest cheatsheet line:** {g['match']}")
+                st.text(g["text"])
+
+        with summary.container():
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Covered", covered)
+            c2.metric("Skipped", skipped)
+            c3.metric("Can't check", cant)
