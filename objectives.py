@@ -61,8 +61,12 @@ def _objective_lines(slide):
     """
     worded, bullets = [], []
     for line in _join_wrapped(slide["text"]):       # rejoin lines the PDF split
-        is_bullet = line[0] in BULLETS
-        clean = line.lstrip(BULLETS).strip()         # remove any bullet symbol
+        # PDFs store bullets as many different symbols (•, ·, ▪, , …), so treat
+        # ANY non-letter, non-digit character at the start of a line as a bullet.
+        is_bullet = not line[0].isalnum()
+        clean = line.lstrip(BULLETS).strip()
+        while clean and not clean[0].isalnum():      # remove any leading symbols
+            clean = clean[1:].lstrip()
         words = clean.split()
 
         # Skip the title, short fragments and course details ("Week 2 · Lecture 04")
