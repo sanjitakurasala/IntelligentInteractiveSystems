@@ -9,7 +9,6 @@ A Streamlit prototype that checks a student's AI-made revision cheatsheet agains
 
 **Submitted version:** release `v1.0` (commit `[hash]`)
 
-![Architecture](docs/architecture.png)
 
 ---
 
