@@ -49,7 +49,7 @@ A Streamlit prototype that checks a student's AI-made revision cheatsheet agains
 | sentence-transformers, `all-MiniLM-L6-v2` | **The AI component.** Embeds slides, cheatsheet lines and objectives; cosine similarity decides coverage and objective links. Runs locally |
 | `style.css`, `.streamlit/config.toml` | Blue and white light theme |
 
-**Undecided:** which LLM and vision model to use for the planned accuracy check.
+
 
 ---
 
@@ -122,7 +122,7 @@ The first run downloads the embedding model (about 90 MB).
 
 I used **Claude (Anthropic)**.
 
-**Asked it to help with:** Writing and debugging the Python code, adding comments that explain the code, fixing setup problems, diagrams briefly with report and readme but I worked on the report and readme mainly on my own.
+**Asked it to help with:**writing and debugging the Python code, adding comments that explain it, fixing setup problems, and help with the diagrams. I wrote the report and README mainly myself, with Claude helping to edit them.
 
 **How I used or changed its suggestions**
 - Key design changes were my decisions after testing: uploading the student's own cheatsheet, showing slide images, point level checks and sorting by learning objectives
